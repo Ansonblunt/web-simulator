@@ -22,6 +22,9 @@ task('build', [], require('./build/build'));
 desc("test and lint before building (with js compression)");
 task('deploy', [], require('./build/deploy'));
 
+desc("display ut in the panel - jake ut");
+task('ut', [], require('./build/ut'));
+
 // TODO: put this functionality into its own module (same with code in build/deploy).
 desc("run all tests in node with an emulated dom - jake test [path,path2]");
 task('test', [], function () {
