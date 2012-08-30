@@ -49,8 +49,15 @@ function _handle(func) {
 module.exports = _handle(function (ext, opts, complete) {
     opts = opts || {};
 
-    var build = jWorkflow.order(clean)
-                         .andThen(pack);
+    var build = jWorkflow.order(clean);
+
+    build.andThen(function () {
+        if (opts && opts.isTest) {
+            return pack(opts.isTest);
+        } else {
+            return pack();
+        }
+    });
 
     switch (ext) {
     case 'web':

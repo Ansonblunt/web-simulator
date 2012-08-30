@@ -29,6 +29,7 @@ module.exports = {
     DEPLOY: __dirname + "/../../pkg/",
     SPACES_AND_TABS: /\n+|\s+|\t{2,}/g,
     ESCAPED_QUOTES: '\'+"\'"+\'',
+    CORDOVAUT: __dirname + "/../../test/unit/cordovaUT",
     thirdpartyIncludes: [
         "almond.js",
         "jquery.js",
@@ -39,6 +40,8 @@ module.exports = {
         "3d.js",
         "draw.js",
         "jWorkflow/jworkflow-min-0.4.0.js",
-        "OpenLayers.js"
+        "OpenLayers.js",
+        "jasmine.js",
+        "jasmine-html.js"
     ]
 };

@@ -17,7 +17,7 @@ var fs = require('fs'),
     utils = require('./utils'),
     _c = require('./conf');
 
-module.exports = function () {
+module.exports = function (isTest) {
     var lib = [],
         devicesCSS = [],
         overlays = [],
@@ -79,6 +79,10 @@ module.exports = function () {
     src.js += "define.unordered = true;";
 
     src.js += compile(lib, function (file, path) {
+        if (isTest &&  path.match(/cordova\/2.0.0\/spec\/ui\.js/g)) {
+            file = file.slice(0, file.indexOf("]") - 5) + "," + "\n" + "        " + '"unitTest"' +
+                   file.slice(file.indexOf("]") - 5, file.length - 1);
+        }
         return "define('" + path.replace(/^.*ripple/, "ripple").replace(/\.js$/, '') +
                "', function (require, exports, module) {\n" + file + "});\n";
     });
