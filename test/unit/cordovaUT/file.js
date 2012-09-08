@@ -16,12 +16,96 @@
 
 describe("cordova file bridge", function () {
     var _file = require('ripple/platform/cordova/2.0.0/bridge/file'),
-        topCordova = require('ripple/platform/cordova/2.0.0/spec');
+        topCordova = require('ripple/platform/cordova/2.0.0/spec'),
+        flag   = false,
+        result = {};
+
+    function initFile() {
+        beforeEach(function () {
+            var _beforeFlag = false;
+ 
+            runs(function () {
+                _file.write(function () {
+                    _beforeFlag = true;
+                }, null, [{name: "/ut.txt"}, "this is a test for writing a file"]);
+            });
+            waitsFor(function () {
+                return _beforeFlag;
+            }, "file init", 200);
+        });
+    }
+
+    function unInitFile() {
+        afterEach(function () {
+            var _afterFlag = false;
+
+			flag   = false;
+			result = {};
+
+            runs(function () {
+                _file.remove(function () {
+                    _afterFlag = true;
+                }, null, ["/ut.txt"]);
+            });
+            waitsFor(function () {
+                return _afterFlag;
+            }, "file uninit", 200);
+		});
+    }
+
+    function initDir() {
+        beforeEach(function () {
+            var _beforeFlag = false;
+
+            runs(function () {
+                _file.getDirectory(function () {
+                    _beforeFlag = true;
+                }, null, ["/", "Document", {create: true}]);
+            });
+            waitsFor(function () {
+                return _beforeFlag;
+            }, "directory init", 200);
+        });
+    }
+
+    function unInitDir() {
+        afterEach(function () {
+            var _afterFlag = false;
+
+			flag = false;
+			result = {};
+
+            runs(function () {
+                _file.removeRecursively(function () {
+                    _afterFlag = true;
+                }, null, ["/Document"]);
+            });
+            waitsFor(function () {
+                return _afterFlag;
+            }, "directory uninit", 200);
+		});
+    }
+
+    function allInit() {
+        beforeEach(function () {
+            var _beforeFlag = false;
+
+            runs(function () {
+                _file.getDirectory(function () {
+                    _file.getDirectory(function () {
+                        _file.getFile(function () {
+                            _beforeFlag = true;
+                        }, null, ["/Document/UT", "ut.txt", {create: true}]); 
+                    }, null, ["/Document", "UT", {create: true}]);
+                }, null, ["/", "Document", {create: true}]);
+            });
+            waitsFor(function () {
+                return _beforeFlag;
+            }, "init", 200);
+        });
+    }
 
     describe("On requestFileSystem", function () {
-        var result = {},
-			flag = false;
-
 		afterEach(function () {
 			flag   = false;
 			result = {};
@@ -33,7 +117,7 @@ describe("cordova file bridge", function () {
 					flag = true;
                 }),
                 error = jasmine.createSpy("error"),
-                args  = [window.TEMPORARY, 2*1024*1024];
+                args  = [window.TEMPORARY, 2 * 1024 * 1024];
 
             runs(function () {
 				_file.requestFileSystem(success, error, args);
@@ -45,7 +129,7 @@ describe("cordova file bridge", function () {
 
 
 			runs(function () {
-			    expect(error).not.toHaveBeenCalled();
+                expect(error).not.toHaveBeenCalled();
                 expect(success).toHaveBeenCalled();
 				expect(result.name).not.toEqual("");
 				expect(result.root.fullPath).toEqual("/");
@@ -58,7 +142,7 @@ describe("cordova file bridge", function () {
                     result = fs;
 					flag = true;
                 }),
-                args = [window.TEMPORARY, 2*1024*1024];
+                args = [window.TEMPORARY, 2 * 1024 * 1024];
 			
 			runs(function () {
 				_file.requestFileSystem(success, null, args);
@@ -82,7 +166,7 @@ describe("cordova file bridge", function () {
                     result = e;
 					flag = true;
                 }),
-				args = [window.TEMPORARY, 1024*1024*1024 + 1];
+				args = [window.TEMPORARY, 1024 * 1024 * 1024 + 1];
 			
 			runs(function () {
 				_file.requestFileSystem(success, error, args);
@@ -105,37 +189,8 @@ describe("cordova file bridge", function () {
     });
 
     describe("On resolveLocalFileSystemURI", function () {
-        var flag   = false,
-			result = {};
-
-        beforeEach(function () {
-            var _beforeFlag = false;
- 
-            runs(function () {
-                _file.getFile(function () {
-				    _beforeFlag = true;	
-			    }, null, ["/", "ut.txt", {create: true, exclusive: false}])
-            });
-            waitsFor(function () {
-                return _beforeFlag;
-            }, "resolveLocalFileSystemURI init", 200);
-        });
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag   = false;
-			result = {};
-
-            runs(function () {
-                _file.remove(function () {
-				    _afterFlag = true;	
-			    }, null, ["/ut.txt"])
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "resolveLocalFileSystemURI recover", 200);
-		});
+        initFile();
+        unInitFile();
 
         it("when resolving local file system URI with '/ut.txt' args", function () {
             var success = jasmine.createSpy("success").andCallFake(function (entry) {
@@ -165,7 +220,7 @@ describe("cordova file bridge", function () {
         it("when resolving local file system URI with 'file://localhost/ut.txt' args", function () {
             var success = jasmine.createSpy("success").andCallFake(function (entry) {
                     result = entry;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
                 args = ["file://localhost/ut.txt"];
@@ -191,7 +246,7 @@ describe("cordova file bridge", function () {
             var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
                 args = ["/not-exist.txt"];
 
@@ -239,36 +294,19 @@ describe("cordova file bridge", function () {
     });
 
     describe("On getFile", function () {
-        var flag   = false,
-			result = {};
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag   = false;
-			result = {};
-
-			runs(function () {
-                _file.remove(function () {
-				    _afterFlag = true;	
-			    }, null, ["/ut.txt"])
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "getFile recover", 200);
-		});
+        unInitFile();
 
         it("when getting an aleady exsit file", function () {
 			var success = jasmine.createSpy("success").andCallFake(function (entry) {
                     result = entry;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args = ["/", "ut.txt", {create: false}];
 
 			runs(function () {
                 _file.getFile(function () {
-			        _file.getFile(success, error, args)
+                    _file.getFile(success, error, args);
 				}, null, ["/", "ut.txt", {create: true, exclusive: false}]);
 			});
 
@@ -288,14 +326,14 @@ describe("cordova file bridge", function () {
         it("when getting an not exsit file with 'create: true' arg", function () {
 			var success = jasmine.createSpy("success").andCallFake(function (entry) {
                     result = entry;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args = ["/", "ut.txt", {create: true}];
 
 			runs(function () {
-                _file.getFile(success, error, args)
- 			});
+                _file.getFile(success, error, args);
+            });
 
 			waitsFor(function () {
 				return flag;
@@ -314,13 +352,13 @@ describe("cordova file bridge", function () {
 			var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
 				args = ["/", "not-exsit.txt", {}];
 
 			runs(function () {
-			    _file.getFile(function () {
-			        _file.getFile(success, error, args)
+                _file.getFile(function () {
+                    _file.getFile(success, error, args);
 				}, null, ["/", "ut.txt", {create: true, exclusive: false}]);
 			});
 
@@ -337,8 +375,8 @@ describe("cordova file bridge", function () {
 
         it("when getting file without args", function () {
 			runs(function () {
-				 _file.getFile(function () {
-			       flag = true;
+                _file.getFile(function () {
+                    flag = true;
 				}, null, ["/", "ut.txt", {create: true, exclusive: false}]);
 			});
 
@@ -349,14 +387,11 @@ describe("cordova file bridge", function () {
 			runs(function () {
 				expect(_file.getFile).toThrow();
 			});	
-		})
+		});
     });
 
 
     describe("On remove", function () {
-        var flag   = false,
-			result = {};
-
         afterEach(function () {
 			flag   = false;
 			result = {};
@@ -364,15 +399,15 @@ describe("cordova file bridge", function () {
 
         it("when removing an already exsit file", function () {
 			var success = jasmine.createSpy("success").andCallFake(function () {
-		            flag = true;
+                    flag = true;
                 }),
 				error = jasmine.createSpy("error"),
                 args = ["/ut.txt"];
 
 			runs(function () {
-			    _file.getFile(function () {
-				    _file.remove(success, error, args);
-			    }, null, ["/", "ut.txt", {create: true}])
+                _file.getFile(function () {
+                    _file.remove(success, error, args);
+                }, null, ["/", "ut.txt", {create: true}]);
 			});
 
 			waitsFor(function () {
@@ -385,16 +420,16 @@ describe("cordova file bridge", function () {
 			});	
 		});
 
-        it("when removing a no texist file", function () {
+        it("when removing a not exist file", function () {
 			var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
                 args = ["/ut.txt"];
 
 			runs(function () {
-		        _file.remove(success, error, args);
+                _file.remove(success, error, args);
 			});
 
 			waitsFor(function () {
@@ -414,42 +449,13 @@ describe("cordova file bridge", function () {
     });
 
     describe("On readEntries", function () {
-        var flag   = false,
-			result = {};
-
-        beforeEach(function () {
-            var _beforeFlag = false;
-
-            runs(function () {
-                _file.getDirectory(function () {
-                    _beforeFlag = true;
-                }, null, ["/", "Document", {create: true}]);
-            });
-            waitsFor(function () {
-                return _beforeFlag;
-            }, "readEntries init", 200);
-        });
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag = false;
-			result = {};
-
-            runs(function () {
-                _file.removeRecursively(function () {
-                    _afterFlag = true;
-                }, null, ["/Document"]);
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "readEntries recover", 200);
-		});
+        initDir();
+        unInitDir();
 
         it("when reading entries", function () {
 			var success = jasmine.createSpy("success").andCallFake(function (entries) {
                     result = entries;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args  = ["/"];
@@ -473,13 +479,13 @@ describe("cordova file bridge", function () {
         it("when reading entries from an empty entry", function () {
 			var success = jasmine.createSpy("success").andCallFake(function (entries) {
                     result = entries;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args = ["/Document"];
 	
 			runs(function () {
-			    _file.readEntries(success, error, args);
+                _file.readEntries(success, error, args);
 			});
 
 			waitsFor(function () {
@@ -489,15 +495,15 @@ describe("cordova file bridge", function () {
 			runs(function () {
 				expect(error).not.toHaveBeenCalled();
                 expect(success).toHaveBeenCalled();
-				expect(result.length).toEqual(0);
-			});         				
-		});
+                expect(result.length).toEqual(0);
+            });
+        });
 
         it("when reading entries with not exsit path args", function () {
 			var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
 				args = ["/not-exsit"];
 				
@@ -522,36 +528,19 @@ describe("cordova file bridge", function () {
     });
 
     describe("On getDirectory", function () {
-        var flag   = false,
-			result = {};
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag   = false;
-			result = {};
-
-			runs(function () {
-                _file.removeRecursively(function () {
-				    _afterFlag = true;	
-			    }, null, ["/Document"])
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "getDirectory recover", 200);
-		});
+        unInitDir();
 
         it("when getting an aleady exsit dirctory", function () {
 			var success = jasmine.createSpy("success").andCallFake(function (entry) {
                     result = entry;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args = ["/", "Document", {create: false}];
 
 			runs(function () {
                 _file.getDirectory(function () {
-			        _file.getDirectory(success, error, args)
+                    _file.getDirectory(success, error, args);
 				}, null, ["/", "Document", {create: true, exclusive: false}]);
 			});
 
@@ -571,14 +560,14 @@ describe("cordova file bridge", function () {
         it("when getting a not exsit dirctory with 'create: true' arg", function () {
 			var success = jasmine.createSpy("success").andCallFake(function (entry) {
                     result = entry;
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args = ["/", "Document", {create: true}];
 
 			runs(function () {
-                _file.getDirectory(success, error, args)
- 			});
+                _file.getDirectory(success, error, args);
+            });
 
 			waitsFor(function () {
 				return flag;
@@ -597,13 +586,13 @@ describe("cordova file bridge", function () {
 			var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
 				args = ["/", "not-exsit", {}];
 
 			runs(function () {
-			    _file.getDirectory(function () {
-			        _file.getDirectory(success, error, args)
+                _file.getDirectory(function () {
+                    _file.getDirectory(success, error, args);
 				}, null, ["/", "Document", {create: true, exclusive: false}]);
 			});
 
@@ -620,8 +609,8 @@ describe("cordova file bridge", function () {
 
         it("when getting dirctory without args", function () {
 			runs(function () {
-				 _file.getDirectory(function () {
-			       flag = true;
+                _file.getDirectory(function () {
+                    flag = true;
 				}, null, ["/", "Document", {create: true, exclusive: false}]);
 			});
 
@@ -632,13 +621,10 @@ describe("cordova file bridge", function () {
 			runs(function () {
 				expect(_file.getDirectory).toThrow();
 			});	
-		})
+		});
     });
 
     describe("On removeRecursively", function () {
-        var flag   = false,
-			result = {};
-
         afterEach(function () {
 			flag   = false;
 			result = {};
@@ -646,7 +632,7 @@ describe("cordova file bridge", function () {
  
         it("when removing recursively with an already exsit path arg", function () {
             var success = jasmine.createSpy("success").andCallFake(function () {
-		            flag = true;
+                    flag = true;
                 }),
                 error = jasmine.createSpy("error"),
 				args = ["/Document"];
@@ -671,7 +657,7 @@ describe("cordova file bridge", function () {
             var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
 				args = ["/not-exsit"];
            
@@ -694,7 +680,7 @@ describe("cordova file bridge", function () {
             var success = jasmine.createSpy("success"),
                 error = jasmine.createSpy("error").andCallFake(function (e) {
                     result = e;
-		            flag = true;
+                    flag = true;
                 }),
 				args = ["/"];
 
@@ -715,7 +701,7 @@ describe("cordova file bridge", function () {
 
         it("when removing recursively without error callback", function () {
             var success = jasmine.createSpy("success").andCallFake(function () {
-		            flag = true;
+                    flag = true;
                 }),
 				args = ["/Document"];
            
@@ -740,37 +726,8 @@ describe("cordova file bridge", function () {
     });
 
     describe("On getFileMetadata", function () {
-        var flag = false,
-			result = {};
-
-        beforeEach(function () {
-            var _beforeFlag = false;
- 
-            runs(function () {
-                _file.getFile(function () {
-				    _beforeFlag = true;	
-			    }, null, ["/", "ut.txt", {create: true, exclusive: false}])
-            });
-            waitsFor(function () {
-                return _beforeFlag;
-            }, "getFileMetadata init", 200);
-        });
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag = false;
-			result = {};
-
-            runs(function () {
-                _file.remove(function () {
-				    _afterFlag = true;	
-			    }, null, ["/ut.txt"])
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "getFileMetadata recover", 200);
-		});
+        initFile();
+        unInitFile();
         
         it("when getting file metadata with an already exsit path arg", function () {
             var success = jasmine.createSpy("success").andCallFake(function (entry) {
@@ -792,7 +749,7 @@ describe("cordova file bridge", function () {
                 expect(error).not.toHaveBeenCalled();
                 expect(success).toHaveBeenCalled();
                 expect(result.name).toEqual("ut.txt");
-                expect(result.size).toEqual(0);
+                expect(result.size).toEqual(jasmine.any(Number));
                 expect(result.type).toEqual("text/plain");
             });
         });
@@ -838,7 +795,7 @@ describe("cordova file bridge", function () {
             runs(function () {
                 expect(success).toHaveBeenCalled();
                 expect(result.name).toEqual("ut.txt");
-                expect(result.size).toEqual(0);
+                expect(result.size).toEqual(jasmine.any(Number));
                 expect(result.type).toEqual("text/plain");
             });
         });
@@ -857,38 +814,8 @@ describe("cordova file bridge", function () {
     });
 
     describe("On getMetadata", function () {
-        var flag = false,
-			result = {};
-
-        beforeEach(function () {
-            var _beforeFlag = false;
-
-            runs(function () {
-                _file.getDirectory(function () {
-                    _beforeFlag = true;
-                }, null, ["/", "Document", {create: true}]);
-            });
-
-            waitsFor(function () {
-                return _beforeFlag;
-            }, "getMetadata init", 200);
-        });
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag = false;
-			result = {};
-
-            runs(function () {
-                _file.removeRecursively(function () {
-                    _afterFlag = true;
-                }, null, ["/Document"]);
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "getMetadata recover", 200);
-		});
+        initDir();
+        unInitDir();
         
         it("when getting metadata with an already exsit path arg", function () {
             var success = jasmine.createSpy("success").andCallFake(function (entry) {
@@ -971,37 +898,8 @@ describe("cordova file bridge", function () {
     });
 
     describe("On getParent", function () {
-        var flag = false,
-			result = {};
-
-        beforeEach(function () {
-            var _beforeFlag = false;
-
-            runs(function () {
-                _file.getDirectory(function () {
-                    _beforeFlag = true;
-                }, null, ["/", "Document", {create: true}]);
-            });
-            waitsFor(function () {
-                return _beforeFlag;
-            }, "getParent init", 200);
-        });
-
-        afterEach(function () {
-            var _afterFlag = false;
-
-			flag = false;
-			result = {};
-
-            runs(function () {
-                _file.removeRecursively(function () {
-                    _afterFlag = true;
-                }, null, ["/Document"]);
-            });
-            waitsFor(function () {
-                return _afterFlag;
-            }, "getParent recover", 200);
-		});
+        initDir();
+        unInitDir();
 
         it("when getting an already exsit parent", function () {
             var success = jasmine.createSpy("success").andCallFake(function (entry) {
@@ -1076,7 +974,7 @@ describe("cordova file bridge", function () {
             });
         });
 
-        it("when getting metadata without callbacks", function () {
+        it("when getting parent without callbacks", function () {
             var args = ["/Document"];
            
             expect(function () {
@@ -1084,8 +982,548 @@ describe("cordova file bridge", function () {
             });
         });
 
-        it("when getting metadata without args", function () {
+        it("when getting parent without args", function () {
             expect(_file.getParent).toThrow();
         });
+    });
+
+    describe("On copyTo", function () {
+        allInit();
+        unInitDir();
+ 
+        it("when copying a file to a parent directory with original name", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/Document/UT/ut.txt", "/Document", "ut.txt"];
+
+            runs(function () {
+                _file.copyTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "copying to", 200);
+    
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result.name).toEqual("ut.txt");
+                expect(result.isFile).toEqual(true);
+                expect(result.fullPath).toEqual("/Document/ut.txt");
+            });
+        });
+
+        it("when copying a file to a parent directory with a new name", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/Document/UT/ut.txt", "/Document", "newut.txt"];
+
+            runs(function () {
+                _file.copyTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "copying to", 200);
+    
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result.name).toEqual("newut.txt");
+                expect(result.isFile).toEqual(true);
+                expect(result.fullPath).toEqual("/Document/newut.txt");
+            });
+        });
+
+        it("when copying a file to own directory with original name", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = ["/Document/UT/ut.txt", "/Document/UT", "ut.txt"];
+
+            runs(function () {
+                _file.copyTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "copying to", 200);
+    
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(9);
+            });
+        });
+
+        it("when copying a file to own directory with a new name", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/Document/UT/ut.txt", "/Document/UT", "newut.txt"];
+
+            runs(function () {
+                _file.copyTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "copying to", 200);
+    
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result.name).toEqual("newut.txt");
+                expect(result.isFile).toEqual(true);
+                expect(result.fullPath).toEqual("/Document/UT/newut.txt");
+            });
+        });
+
+        it("when copying a directory to child directory", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = ["/Document", "/Document/UT", "Document"];
+
+            runs(function () {
+                _file.copyTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "copying to", 200);
+    
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(9);
+            });
+        });
+
+        it("when copying without callbacks", function () {
+            var args = ["/Document/UT/ut.txt", "/Document", "ut.txt"];
+
+            expect(function () {
+                _file.copyTo(null, null, args).not.toThrow();
+            });
+        });
+ 
+        it("when copying without args", function () {
+            expect(_file.copyTo).toThrow();
+        });
+    });
+
+    describe("On moveTo", function () {
+        allInit();
+        unInitDir();
+
+        it("when moving a file to a parent directory with original name", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/Document/UT/ut.txt", "/Document", "ut.txt"];
+
+            runs(function () {
+                _file.moveTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "moving to", 200);
+    
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result.name).toEqual("ut.txt");
+                expect(result.isFile).toEqual(true);
+                expect(result.fullPath).toEqual("/Document/ut.txt");
+            });
+        });
+
+        it("when moving a file to a parent directory with a new name", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/Document/UT/ut.txt", "/Document", "newut.txt"];
+
+            runs(function () {
+                _file.moveTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "moving to", 200);
+    
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result.name).toEqual("newut.txt");
+                expect(result.isFile).toEqual(true);
+                expect(result.fullPath).toEqual("/Document/newut.txt");
+            });
+        });
+
+        it("when moving a file to own directory with original name", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = ["/Document/UT/ut.txt", "/Document/UT", "ut.txt"];
+
+            runs(function () {
+                _file.moveTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "moving to", 200);
+    
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(9);
+            });
+        });
+
+        it("when moving a file to own directory with a new name", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/Document/UT/ut.txt", "/Document/UT", "newut.txt"];
+
+            runs(function () {
+                _file.moveTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "moving to", 200);
+    
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result.name).toEqual("newut.txt");
+                expect(result.isFile).toEqual(true);
+                expect(result.fullPath).toEqual("/Document/UT/newut.txt");
+            });
+        });
+
+        it("when moving a directory to child directory", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = ["/Document", "/Document/UT", "Document"];
+
+            runs(function () {
+                _file.moveTo(success, error, args);
+            });
+   
+            waitsFor(function () {
+                return flag;
+            }, "moving to", 200);
+    
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(9);
+            });
+        });
+
+        it("when moving without callbacks", function () {
+            var args = ["/Document/UT/ut.txt", "/Document", "ut.txt"];
+
+            expect(function () {
+                _file.moveTo(null, null, args).not.toThrow();
+            });
+        });
+ 
+        it("when moving without args", function () {
+            expect(_file.moveTo).toThrow();
+        });
+    });
+
+    describe("On write", function () {
+        initFile();
+        unInitFile();
+
+        it("when writing a file with an already exist path arg", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = [{name: "/ut.txt"}, "this is a test for writing a file"];
+        
+            runs(function () {
+                _file.write(success, error, args);
+            });
+ 
+            waitsFor(function () {
+                return flag;
+            }, "write", 200);
+
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result).toEqual(jasmine.any(Number));
+            });
+        });
+
+        it("when writing a file with a 'position' arg", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (entry) {
+                    result = entry;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = [{name: "/ut.txt"}, "this is a test for writing a file", 2];
+        
+            runs(function () {
+                _file.write(success, error, args);
+            });
+ 
+            waitsFor(function () {
+                return flag;
+            }, "write", 200);
+
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result).toEqual(jasmine.any(Number));
+            });
+        });
+
+        it("when writing a file without callbacks", function () {
+            var args = [{name: "/ut.txt"}, "this is a test for writing a file"];
+   
+            expect(function () {
+                _file.write(null, null, args).not.toThrow();
+            });         
+        });
+
+        it("when writing a file without arg", function () {
+            expect(_file.write).toThrow(); 
+        });
+    });
+
+    describe("On readAsText", function () {
+        initFile();
+        unInitFile();
+
+        it("when reading as test with an already exist path arg", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (content) {
+                    result = content;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/ut.txt", "utf-8"];
+
+            runs(function () {
+                _file.readAsText(success, error, args);
+            });
+
+            waitsFor(function () {
+                return flag; 
+            }, "read as text", 200);
+
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result).toEqual("this is a test for writing a file");
+            });
+        });
+
+        it("when reading as test with a not exist path arg", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = ["/not-exist.txt", "utf-8"];
+
+            runs(function () {
+                _file.readAsText(success, error, args);
+            });
+
+            waitsFor(function () {
+                return flag; 
+            }, "read as text", 200);
+
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(1);
+            });
+        });
+
+        it("when reading as test without callbacks", function () {
+            var args = ["/ut.txt", "utf-8"];
+   
+            expect(function () {
+                _file.readAsText(null, null, args).not.toThrow();
+            });         
+        });
+
+        it("when reading as test without arg", function () {
+            expect(_file.readAsText).toThrow(); 
+        });
+    });
+
+    describe("On readAsDataURL", function () {
+        initFile();
+        unInitFile();
+
+        it("when reading as data URL with an already exist path arg", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (content) {
+                    result = content;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = ["/ut.txt"];
+
+            runs(function () {
+                _file.readAsDataURL(success, error, args);
+            });
+
+            waitsFor(function () {
+                return flag; 
+            }, "read as data url", 200);
+
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result).toEqual(jasmine.any(String));
+            });
+        });
+
+        it("when reading as data URL with a not exist path arg", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = ["/not-exist.txt", "utf-8"];
+
+            runs(function () {
+                _file.readAsDataURL(success, error, args);
+            });
+
+            waitsFor(function () {
+                return flag; 
+            }, "read as data url", 200);
+
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(1);
+            });
+        });
+
+        it("when reading as data URL without callbacks", function () {
+            var args = ["/ut.txt"];
+   
+            expect(function () {
+                _file.readAsDataURL(null, null, args).not.toThrow();
+            });         
+        });
+
+        it("when reading as data URL without arg", function () {
+            expect(_file.readAsDataURL).toThrow(); 
+        });        
+    });
+
+    describe("On truncate", function () {
+        initFile();
+        unInitFile();
+
+        it("when truncating with an already exist file path arg", function () {
+            var success = jasmine.createSpy("success").andCallFake(function (length) {
+                    result = length;
+                    flag = true;
+                }),
+                error = jasmine.createSpy("error"),
+                args = [{name: "/ut.txt"}, 2];
+
+            runs(function () {
+                _file.truncate(success, error, args);
+            });
+
+            waitsFor(function () {
+                return flag;
+            }, "truncate", 200);
+
+            runs(function () {
+                expect(error).not.toHaveBeenCalled();
+                expect(success).toHaveBeenCalled();
+                expect(result).toEqual(2);
+            });
+        });
+
+        it("when truncating with a not exist file path arg", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error").andCallFake(function (e) {
+                    result = e;
+                    flag = true;
+                }),
+                args = [{name: "/no-exist.txt"}, 2];
+
+            runs(function () {
+                _file.truncate(success, error, args);
+            });
+
+            waitsFor(function () {
+                return flag;
+            }, "truncate", 200);
+
+            runs(function () {
+                expect(success).not.toHaveBeenCalled();
+                expect(error).toHaveBeenCalled();
+                expect(result).toEqual(1);
+            });
+        });
+
+        it("when truncating with a negative 'position' arg", function () {
+            var success = jasmine.createSpy("success"),
+                error = jasmine.createSpy("error"),
+                args = [{name: "/ut.txt"}, -1];
+
+            runs(function () {
+                expect(function () {
+                    _file.truncate(success, error, args).toThrow();
+                });
+            });
+        });
+
+        it("when truncating without callbacks", function () {
+            var args = [{name: "/ut.txt"}, 2];
+   
+            expect(function () {
+                _file.truncate(null, null, args).not.toThrow();
+            });         
+        });
+
+        it("when truncating without arg", function () {
+            expect(_file.truncate).toThrow(); 
+        });    
     });
 });

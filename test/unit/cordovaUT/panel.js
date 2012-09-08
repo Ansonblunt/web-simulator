@@ -16,28 +16,29 @@
 
 var jasmineEnv = jasmine.getEnv(),
     trivialReporter = new jasmine.TrivialReporter(),
-    start = document.getElementById("start-unitTest"),
-    clear = document.getElementById("clear-unitTest")
-    result = document.getElementById("unitTest-result");
+    start = document.getElementById("unitTest-start"),
+    startInfo = document.getElementById("unitTest-startInfo"),
+    result = document.getElementById("unitTest-result"),
+    info = document.getElementById("unitTest-Info"),
+    flag = true;
 
 jasmineEnv.updateInterval = 1000;
 jasmineEnv.addReporter(trivialReporter);
-jasmineEnv.specFilter = function(spec) {
+jasmineEnv.specFilter = function (spec) {
     return trivialReporter.specFilter(spec);
 };
 
 start.addEventListener('click', function () {
-    result.style.display = "block";
-    start.disabled = "disabled";
-    jasmineEnv.execute();
+    if (flag) {
+        flag = !flag;
+        result.style.display = "block";
+        startInfo.innerHTML = "Restart";
+        info.innerHTML = "Press Restart to reload the page to do the unit test again.<br/>";
+        jasmineEnv.execute();
+    } else {
+        location.reload();
+    }
 });
-
-clear.addEventListener('click', function () {
-    result.innerHTML = "";
-    result.style.display = "none";
-    start.disabled = "";
-});
-
 
 module.exports = {
     panel: {
